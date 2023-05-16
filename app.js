@@ -15,6 +15,6 @@ app.use(cors());
 app.use(router)
 
 // app corriendo en el puerto 3001
-app.listen(3001, () => {
-    console.log("http://localhost:3001");
+app.listen(process.env.PORT || 3001, () => {
+    console.log("WORKS");
 })
