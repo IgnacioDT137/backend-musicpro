@@ -6,6 +6,9 @@ const tiendaController = require("./tiendacontroller")
 const router = express.Router();
 
 // RUTAS DE USUARIO
+router.get("/", (req, res) => {
+    return res.send("Hola")
+})
 router.get("/testdb", userController.testconexion)
 router.post("/login", userController.login)
 router.post("/registro", userController.registro)
