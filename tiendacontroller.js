@@ -228,7 +228,7 @@ const aceptarPedidoBod = async(req, res) => {
        const query = `UPDATE PEDIDO SET APROBADO_BOD = 1 WHERE id_pedido = ${id_pedido}`
        await conexion.execute(query, (err, results)=>{
         if(err){
-            return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PEDIDOS"})
+            return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PEDIDOS", err})
         }
 
         pedido.map(async(i) => {
