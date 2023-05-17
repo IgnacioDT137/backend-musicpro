@@ -1,15 +1,20 @@
 const conexion = require("./db")
 
+// Funcion para que el cliente completa su pedido
 const completarCompra = async(req, res) =>{
     try {
+        // Estas variables se obtienen desde el body de la request, el cual es un JSON
         const metodo = req.body.metodo
         const total = req.body.total
+
+        // Validacion de método de pago
         var aprobado = 1;
 
         if (metodo == "Transferencia") {
             aprobado = 0;
         }
 
+        // campos restantes del pedido
         const rut = req.body.rut
         var fecha = new Date()
         fecha = fecha.toISOString()
@@ -18,6 +23,7 @@ const completarCompra = async(req, res) =>{
 
         const query = `INSERT INTO pago VALUES (null, '${metodo}', ${total}, ${aprobado})`
 
+        // primero genera un pago para obtener su ID
         await conexion.execute(query, async (err, results) => {
             if(err){
                 return res.status(400).json({ERROR: "ERROR AL REGISTRAR PAGO"})
@@ -25,6 +31,8 @@ const completarCompra = async(req, res) =>{
             const resultados = results
             
             const query = `insert into pedido (id_pedido, id_pago, rut_cliente, fecha, productos, direccion) values (null, ${resultados.insertId}, '${rut}', '${fecha}', '${JSON.stringify(productos)}', '${direccion}')`
+            /* Luego de generar el pago, se genera el pedido para que la columna id_pago no esté vacia, 
+            el id_pago se obtiene de la propiedad insertId del JSON de reslutados de la query anterior */
             await conexion.execute(query, (err, results) => {
                 if (err) {
                     return res.status(400).json({ERROR: "ERROR AL REGISTRAR PEDIDO", err})
@@ -44,15 +52,24 @@ const completarCompra = async(req, res) =>{
 //Se muestran todos los pagos registrados
 const mostrarPagos = async (req, res) => {
     try {
+        //Se declara una sentencia sql y se guarda en una variable
         const query = `SELECT * FROM pago`
+
+        //Se ejecuta la conexión de base de datos
         await conexion.execute(query, (err, results)=>{
+
+            //Si hay un error mostrará un mensaje 
             if(err){
                 return res.status(400).json({ERROR: "ERROR AL MOSTRAR PAGOS"})
             }
+
+            //En caso de no haber ningún error, se mostrarán la lista de pagos realizados
             const resultados = results
             return res.json({MSG: "PAGOS MOSTRADOS", resultados})
         }) 
     } catch (error) {
+
+        //Retornará un mensaje de error
         return res.status(500).json({ERROR: "ERROR DE SERVIDOR"})
     }
 }
@@ -60,9 +77,17 @@ const mostrarPagos = async (req, res) => {
 //Se actualiza el estado de los pagos cuando se aprueban
 const actualizarPagos = async (req, res) =>{
     try {
+
+        //Se declara una variable para guardar datos mediante parámetros
         const id_pago = req.params.id_pago
+
+        //Actualiza el estado de los pagos 
         const query = `UPDATE pago SET aprobado = 1 WHERE id_pago = ${id_pago}`
+
+        //Se ejecuta la query
         await conexion.execute(query, (err, results)=>{
+
+            //
             if(err){
                 return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PAGOS"})
             }
@@ -71,6 +96,8 @@ const actualizarPagos = async (req, res) =>{
         }) 
 
     } catch (error) {
+
+        //Retornará un mensaje de error
         return res.status(500).json({ERROR: "ERROR DE SERVIDOR"})
     }
 }
@@ -78,6 +105,7 @@ const actualizarPagos = async (req, res) =>{
 //Se muestran todos los pedidos realizados
 const mostrarEntregas = async (req, res) => {
     try {
+        //Esta variable guarda una sentencia sql para mostrar los pedidos que se están despachando
         const query = `SELECT * from pedido WHERE despachando = 1`
         await conexion.execute(query, (err, results)=>{
             if(err){
@@ -95,8 +123,13 @@ const mostrarEntregas = async (req, res) => {
 //Actualiza el estado de los pedidos y se valida las entregas
 const actualizarEntregas = async (req, res) =>{
     try {
+        //Se declara una variable para guardar datos mediante parámetros
         const id_pedido = req.params.id_pedido
+
+        //Se declara una variable que guarda una sentencia sql 
         const query = `UPDATE pedido SET entregado = 1 WHERE id_pedido = ${id_pedido}`
+
+        //Se ejecuta la query
         await conexion.execute(query, (err, results)=>{
             if(err){
                 return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR ENTREGAS"})
@@ -105,11 +138,15 @@ const actualizarEntregas = async (req, res) =>{
             return res.json({MSG: "ENTREGA ACTUALIZADA", resultados})
         }) 
     } catch (error) {
+
+        //Retornará un mensaje de error 
         return res.status(500).json({ERROR: "ERROR DE SERVIDOR"})
     }
 }
 
 // Funciones de vendedor
+
+// Funcion para obtener los pedidos que han sido realizados recientemente
 const getPedidosPendientes = async (req, res) => {
     try {
         const query = `select * from pedido where aprobado_v IS NULL;`
@@ -125,6 +162,7 @@ const getPedidosPendientes = async (req, res) => {
     }
 }
 
+// Funcion para obtener todos los pedidos que estan a la espera de la aprobacion del bodeguero
 const getPedidosDeBod = async (req, res) => {
     try {
         const query = `select * from pedido where aprobado_v = 1 AND aprobado_bod IS NULL;`
@@ -140,6 +178,7 @@ const getPedidosDeBod = async (req, res) => {
     }
 }
 
+//Funcion para obtener los pedidos que ya están listos para ser despachados
 const getPedidosDespacho = async (req, res) => {
     try {
         const query = `select * from pedido where aprobado_v = 1 AND aprobado_bod = 1 AND despachando IS NULL;`
@@ -155,6 +194,8 @@ const getPedidosDespacho = async (req, res) => {
     }
 }
 
+
+// Funcion para obtener los pedidos rechazados y ser enviados al frontend
 const getPedidosRechazados = async (req, res) => {
     try {
         const query = `select * from pedido where aprobado_v = 0 OR aprobado_bod = 0;`
@@ -170,7 +211,7 @@ const getPedidosRechazados = async (req, res) => {
     }
 }
 
-
+// Funcion para que el vendedor apruebe un pedido y quede a disposición del bodeguero
 const enviarBodeguero = async (req, res) => {
     try {
         const id_pedido = req.params.id_pedido
@@ -187,9 +228,10 @@ const enviarBodeguero = async (req, res) => {
     }
 }
 
+// Funcion para que el vendedor rechace un pedido
 const rechazarPedidoVendedor = async (req, res) => {
     try {
-        const id_pedido = req.params.id_pedido
+        const id_pedido = req.params.id_pedido // obtiene el id_pedido de los parametros de la URL
         const query = `UPDATE pedido set aprobado_v = 0 WHERE id_pedido = ${id_pedido}`
         conexion.execute(query, (err, results) => {
             if (err) {
@@ -203,6 +245,7 @@ const rechazarPedidoVendedor = async (req, res) => {
     }
 }
 
+//Funcion del vendedor para despachar el pedido
 const despacharPedido = async (req, res) => {
     try {
         const id_pedido = req.params.id_pedido
@@ -221,17 +264,22 @@ const despacharPedido = async (req, res) => {
 
 
 //Funciones de Bodeguero
+
+//Funcion para que el bodeguero acepte un pedido
 const aceptarPedidoBod = async(req, res) => {
     try {
+        //Se generan las variables
        const id_pedido = req.params.id_pedido
        const pedido = req.body.ped
        const query = `UPDATE pedido SET aprobado_bod = 1 WHERE id_pedido = ${id_pedido}`
+       //Se genera la conexion a la base de datos
        await conexion.execute(query, (err, results)=>{
         if(err){
             return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PEDIDOS", err})
         }
-
+        //Se mapean los productos de la base de datos
         pedido.map(async(i) => {
+            //Se crea la variable para actualizar el stock de los productos en la BD
             const act_prod = `UPDATE producto SET stock = ${i.stock - i.cantidad} WHERE codigo = ${i.codigo}`;
             await conexion.execute(act_prod, (err, results) => {
                 if (err) {
@@ -251,11 +299,12 @@ const aceptarPedidoBod = async(req, res) => {
     }
 }
 
+//Esta funcion es para rechazar los pedidos por parte del bodeguero
 const rechazarPedidoBod = async(req, res) => {
     try {
-        const id_pedido = req.params.id_pedido
+        const id_pedido = req.params.id_pedido // El id_pedido es obtenido directamente desde los parámetros de la ruta
         const query = `UPDATE pedido SET aprobado_bod = 0 WHERE id_pedido = ${id_pedido}`
-        await conexion.execute(query, (err, results)=>{
+        await conexion.execute(query, (err, results)=>{            
             if(err){
                 return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PEDIDOS"})
             }
@@ -263,7 +312,7 @@ const rechazarPedidoBod = async(req, res) => {
             return res.json({MSG: "PEDIDO ACTUALIZADO", resultados})
         })
     } catch (error) {
-        
+        return res.status(500).json({ERROR: "ERROR DE SERVIDOR"})
     }
 }
 
