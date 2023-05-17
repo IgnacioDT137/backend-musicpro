@@ -225,7 +225,7 @@ const aceptarPedidoBod = async(req, res) => {
     try {
        const id_pedido = req.params.id_pedido
        const pedido = req.body.ped
-       const query = `UPDATE PEDIDO SET APROBADO_BOD = 1 WHERE id_pedido = ${id_pedido}`
+       const query = `UPDATE pedido SET aprobado_bod = 1 WHERE id_pedido = ${id_pedido}`
        await conexion.execute(query, (err, results)=>{
         if(err){
             return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PEDIDOS", err})
@@ -254,7 +254,7 @@ const aceptarPedidoBod = async(req, res) => {
 const rechazarPedidoBod = async(req, res) => {
     try {
         const id_pedido = req.params.id_pedido
-        const query = `UPDATE PEDIDO SET APROBADO_BOD = 0 WHERE id_pedido = ${id_pedido}`
+        const query = `UPDATE pedido SET aprobado_bod = 0 WHERE id_pedido = ${id_pedido}`
         await conexion.execute(query, (err, results)=>{
             if(err){
                 return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PEDIDOS"})
