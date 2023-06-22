@@ -1,45 +1,90 @@
 const conexion = require("./db")
+const WebpayPlus = require("transbank-sdk").WebpayPlus; // CommonJS
+const { Options, IntegrationApiKeys, Environment, IntegrationCommerceCodes } = require("transbank-sdk"); 
+
+const tx = new WebpayPlus.Transaction(new Options(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, Environment.Integration));
 
 // Funcion para que el cliente completa su pedido
-const completarCompra = async(req, res) =>{
+const iniciarCompra = async(req, res) =>{
     try {
         // Estas variables se obtienen desde el body de la request, el cual es un JSON
-        const metodo = req.body.metodo
         const total = req.body.total
-
-        // Validacion de método de pago
-        var aprobado = 1;
-
-        if (metodo == "Transferencia") {
-            aprobado = 0;
-        }
-
-        // campos restantes del pedido
         const rut = req.body.rut
         var fecha = new Date()
         fecha = fecha.toISOString()
         const productos = req.body.prods
         const direccion = req.body.direccion
 
-        const query = `INSERT INTO pago VALUES (null, '${metodo}', ${total}, ${aprobado})`
+        const response = await tx.create("prueba_musicpro", "prueba_1", parseInt(total), "http://localhost:3001/commit_pago");
 
-        // primero genera un pago para obtener su ID
-        await conexion.execute(query, async (err, results) => {
-            if(err){
-                return res.status(400).json({ERROR: "ERROR AL REGISTRAR PAGO"})
+        const query = `insert into pedido (id_pedido, id_pago, rut_cliente, fecha, productos, direccion) values (null, '${response.token}', '${rut}', '${fecha}', '${JSON.stringify(productos)}', '${direccion}')`
+
+        await conexion.execute(query, (err, results) => {
+            if (err) {
+                return res.status(400).json({ERROR: "ERROR AL PROCESAR PEDIDO"})
+            }
+
+            return res.json({pago: response})
+        })
+
+        
+
+        // // Validacion de método de pago
+        // var aprobado = 1;
+
+        // if (metodo == "Transferencia") {
+        //     aprobado = 0;
+        // }
+
+        // // campos restantes del pedido
+        // const rut = req.body.rut
+        // var fecha = new Date()
+        // fecha = fecha.toISOString()
+        // const productos = req.body.prods
+        // const direccion = req.body.direccion
+
+        // const query = `INSERT INTO pago VALUES (null, '${metodo}', ${total}, ${aprobado})`
+
+        // // primero genera un pago para obtener su ID
+        // await conexion.execute(query, async (err, results) => {
+        //     if(err){
+        //         return res.status(400).json({ERROR: "ERROR AL REGISTRAR PAGO"})
+        //     }
+        //     const resultados = results
+            
+        //     const query = `insert into pedido (id_pedido, id_pago, rut_cliente, fecha, productos, direccion) values (null, ${resultados.insertId}, '${rut}', '${fecha}', '${JSON.stringify(productos)}', '${direccion}')`
+        //     /* Luego de generar el pago, se genera el pedido para que la columna id_pago no esté vacia, 
+        //     el id_pago se obtiene de la propiedad insertId del JSON de reslutados de la query anterior */
+        //     await conexion.execute(query, (err, results) => {
+        //         if (err) {
+        //             return res.status(400).json({ERROR: "ERROR AL REGISTRAR PEDIDO", err})
+        //         }
+        //         const resultados = results
+        //         return res.json({MSG: "COMPRA COMPLETADA", resultados})
+        //     })
+        // })
+
+    } catch (error) {
+        return res.status(500).json({ERROR: "ERROR DE SERVIDOR"})
+    }
+}
+
+const completarCompra = async (req, res) => {
+    try {
+        const token = req.query.token_ws
+        await tx.commit(token);
+
+        const response = await tx.status(token)
+
+        const query = `INSERT INTO pago VALUES ('${token}', '${response.payment_type_code}', ${response.amount}, '${response.status}')`
+
+        conexion.execute(query, (err, results) => {
+            if (err) {
+                return res.status(400).json({ERROR: "ERROR AL INGRESAR UN PAGO"})
             }
             const resultados = results
-            
-            const query = `insert into pedido (id_pedido, id_pago, rut_cliente, fecha, productos, direccion) values (null, ${resultados.insertId}, '${rut}', '${fecha}', '${JSON.stringify(productos)}', '${direccion}')`
-            /* Luego de generar el pago, se genera el pedido para que la columna id_pago no esté vacia, 
-            el id_pago se obtiene de la propiedad insertId del JSON de reslutados de la query anterior */
-            await conexion.execute(query, (err, results) => {
-                if (err) {
-                    return res.status(400).json({ERROR: "ERROR AL REGISTRAR PEDIDO", err})
-                }
-                const resultados = results
-                return res.json({MSG: "COMPRA COMPLETADA", resultados})
-            })
+
+            return res.json({resultados, response})
         })
 
     } catch (error) {
@@ -318,6 +363,7 @@ const rechazarPedidoBod = async(req, res) => {
 
 //Exportación de funciones
 module.exports = {
+  iniciarCompra,
   completarCompra,
   mostrarPagos,
   mostrarEntregas,

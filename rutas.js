@@ -23,7 +23,8 @@ router.get("/productos/:id_categoria", productoController.mostrarProductos)
 router.get("/productos", productoController.getAllProds)
 
 //RUTAS DE PAGOS
-router.post("/pagar", tiendaController.completarCompra)
+router.post("/pagar", tiendaController.iniciarCompra)
+router.get("/commit_pago", tiendaController.completarCompra)
 router.get("/pagos", tiendaController.mostrarPagos)
 router.put("/aprobar-pago/:id_pago", tiendaController.actualizarPagos)
 
