@@ -14,8 +14,6 @@ app.use(cors());
 // la app ahora reconoce las rutas que creamos
 app.use(router)
 
-app.set("view engine", "ejs")
-app.set("views", "views")
 app.set("json spaces", 2)
 
 // app corriendo en el puerto 3001

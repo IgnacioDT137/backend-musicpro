@@ -9,6 +9,7 @@ const iniciarCompra = async(req, res) =>{
     try {
         // Estas variables se obtienen desde el body de la request, el cual es un JSON
         const total = req.body.total
+        console.log(total);
         const rut = req.body.rut
         var fecha = new Date()
         fecha = fecha.toISOString()
