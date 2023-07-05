@@ -19,6 +19,7 @@
     "md5": "^2.3.0",
     "mysql2": "^3.2.3",
     "nodemon": "^2.0.22",
-    "transbank-sdk": "^4.0.0"
+    "transbank-sdk": "^4.0.0",
+    "uuid": "^9.0.0"
   }
 }

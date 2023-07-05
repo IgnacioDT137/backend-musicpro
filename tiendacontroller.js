@@ -1,6 +1,7 @@
 const conexion = require("./db")
 const WebpayPlus = require("transbank-sdk").WebpayPlus; // CommonJS
 const { Options, IntegrationApiKeys, Environment, IntegrationCommerceCodes } = require("transbank-sdk"); 
+const { v4: uuidv4 } = require('uuid');
 
 const tx = new WebpayPlus.Transaction(new Options(IntegrationCommerceCodes.WEBPAY_PLUS, IntegrationApiKeys.WEBPAY, Environment.Integration));
 
@@ -9,24 +10,47 @@ const iniciarCompra = async(req, res) =>{
     try {
         // Estas variables se obtienen desde el body de la request, el cual es un JSON
         const total = req.body.total
-        console.log(total);
         const rut = req.body.rut
         var fecha = new Date()
         fecha = fecha.toISOString()
         const productos = req.body.prods
         const direccion = req.body.direccion
 
-        const response = await tx.create("prueba_musicpro", "prueba_1", parseInt(total), "http://localhost:3001/commit_pago");
+        const metodo = req.body.metodo
 
-        const query = `insert into pedido (id_pedido, id_pago, rut_cliente, fecha, productos, direccion) values (null, '${response.token}', '${rut}', '${fecha}', '${JSON.stringify(productos)}', '${direccion}')`
+        if (metodo != "Transferencia") {
 
-        await conexion.execute(query, (err, results) => {
-            if (err) {
-                return res.status(400).json({ERROR: "ERROR AL PROCESAR PEDIDO"})
-            }
+            const response = await tx.create("prueba_musicpro", "prueba_1", parseInt(total), "http://localhost:3001/commit_pago");
 
-            return res.json({pago: response})
-        })
+            const query = `insert into pedido (id_pedido, id_pago, rut_cliente, fecha, productos, direccion) values (null, '${response.token}', '${rut}', '${fecha}', '${JSON.stringify(productos)}', '${direccion}')`
+
+            await conexion.execute(query, (err, results) => {
+                if (err) {
+                    return res.status(400).json({ERROR: "ERROR AL PROCESAR PEDIDO"})
+                }
+
+                return res.json({pago: response})
+            })
+        } else {
+            const id_pago = uuidv4();
+            const query1 = `INSERT INTO pago VALUES ('${id_pago}', 'Transferencia', ${total}, 'FAILED')`
+            const query2 = `insert into pedido (id_pedido, id_pago, rut_cliente, fecha, productos, direccion) values (null, '${id_pago}', '${rut}', '${fecha}', '${JSON.stringify(productos)}', '${direccion}')`
+        
+            await conexion.execute(query1, (err, results) => {
+                if (err) {
+                    return res.status(400).json({ERROR: "ERROR AL PROCESAR PAGO"})
+                }
+            })
+
+            await conexion.execute(query2, (err, results) => {
+                if (err) {
+                    return res.status(400).json({ERROR: "ERROR AL PROCESAR PEDIDO"})
+                }
+            })
+
+            return res.json({MSG: "PAGO POR TRANSFERENCIA REGISTRADO"})
+        }
+
 
         
 
@@ -128,12 +152,10 @@ const actualizarPagos = async (req, res) =>{
         const id_pago = req.params.id_pago
 
         //Actualiza el estado de los pagos 
-        const query = `UPDATE pago SET aprobado = 1 WHERE id_pago = ${id_pago}`
+        const query = `UPDATE pago SET aprobado = 'AUTHORIZED' WHERE id_pago = '${id_pago}'`
 
         //Se ejecuta la query
         await conexion.execute(query, (err, results)=>{
-
-            //
             if(err){
                 return res.status(400).json({ERROR: "ERROR AL ACTUALIZAR PAGOS"})
             }
